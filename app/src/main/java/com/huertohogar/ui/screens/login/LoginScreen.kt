@@ -15,10 +15,11 @@ import com.huertohogar.ui.components.forms.ValidatedInputField
 @Composable
 fun LoginScreen(
     navController: NavController,
-    viewModel: LoginViewModel = viewModel()
+    viewModel: LoginViewModel // Will be provided through DI in a real implementation
 ) {
     val uiState by viewModel.uiState.collectAsState()
     
+    // Handle navigation after successful login
     LaunchedEffect(uiState.isLoggedIn) {
         if (uiState.isLoggedIn) {
             navController.navigate(Screen.Dashboard.route) {
@@ -77,6 +78,21 @@ fun LoginScreen(
             }
         }
         
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Button(
+            onClick = { 
+                viewModel.registerUser()
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = uiState.isValid && !uiState.isLoading,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondary
+            )
+        ) {
+            Text("Register")
+        }
+        
         if (uiState.errorMessage != null) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -84,7 +100,8 @@ fun LoginScreen(
                 color = MaterialTheme.colorScheme.error
             )
         }
-
+        
+        // Show validation status
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = if (uiState.isValid) "Form is valid" else "Please fix validation errors",

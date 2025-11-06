@@ -4,11 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.huertohogar.core.utils.validators.FormField
 import com.huertohogar.core.utils.validators.FormValidator
+import com.huertohogar.data.repositories.FirebaseAuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class LoginViewModel : ViewModel() {
+class LoginViewModel(
+    private val authRepository: FirebaseAuthRepository
+) : ViewModel() {
     
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState
@@ -39,6 +42,7 @@ class LoginViewModel : ViewModel() {
     }
     
     fun loginUser() {
+        // Validate form before attempting login
         validateForm()
         
         if (!_uiState.value.isValid) {
@@ -48,12 +52,48 @@ class LoginViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
-            kotlinx.coroutines.delay(1000)
+            authRepository.signIn(_uiState.value.email, _uiState.value.password)
+                .onSuccess { user ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isLoggedIn = true,
+                        errorMessage = null
+                    )
+                }
+                .onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = exception.message ?: "Login failed"
+                    )
+                }
+        }
+    }
+    
+    fun registerUser(displayName: String? = null) {
+        // Validate form before attempting registration
+        validateForm()
+        
+        if (!_uiState.value.isValid) {
+            return
+        }
+        
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                isLoggedIn = true
-            )
+            authRepository.signUp(_uiState.value.email, _uiState.value.password, displayName)
+                .onSuccess { user ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isLoggedIn = true,
+                        errorMessage = null
+                    )
+                }
+                .onFailure { exception ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMessage = exception.message ?: "Registration failed"
+                    )
+                }
         }
     }
 }
